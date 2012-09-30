@@ -107,7 +107,7 @@ Protected Module AppleEvents
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Function SendUsingPSN(Extends ae As AppleEvent) As Boolean
+		Function SendUsingPSN(Extends ae As AppleEvent, autoStart As Boolean = False) As Boolean
 		  // Send AppleEvent using PSN instead of Bundle ID; workaround for Mountain Lion 10.8.2 or later
 		  
 		  Soft Declare Function AEGetAttributeDesc Lib "Carbon" (theAppleEvent As Integer, theAEKeyword As OSType, desiredType As OSType, ByRef result As AEDesc) As Short
@@ -121,22 +121,30 @@ Protected Module AppleEvents
 		  Dim bundleId As String
 		  Dim psn As ProcessSerialNumber
 		  
+		  // Retrieve Bundle ID set by the constructor
 		  err =  AEGetAttributeDesc(ae.Ptr, "addr", "bund", aed)
 		  If err <> 0 Then Return ae.Send()
-		  
 		  err = AEGetDescData(aed, mb, mb.Size)
 		  bundleId = mb.CString(0)
 		  
-		  If bundleId.Len() = 4 Then
-		    // seems like an OSType
-		    Return ae.Send()
-		  End If
+		  // bundleId seems like an OSType
+		  If bundleId.Len() = 4 Then Return ae.Send()
 		  
 		  psn = LookupPSNFromBundleID(bundleId)
-		  
 		  If psn.highLongOfPSN = 0 And psn.lowLongOfPSN = 0 Then
-		    // process is not running, just return
-		    Return False
+		    // App is not running...
+		    If autoStart Then
+		      // Launch the app from bundle ID
+		      Dim url As NSURL = NSWorkspace.URLForApplicationWithBundleIdentifier(bundleId)
+		      If url.Item = Nil Then Return False
+		      url.Item.Launch(False)
+		      
+		      // Look up again
+		      psn = LookupPSNFromBundleID(bundleId)
+		      If psn.highLongOfPSN = 0 And psn.lowLongOfPSN = 0 Then Return False
+		    Else
+		      Return False
+		    End If
 		  End If
 		  
 		  mb.CString(0) = psn.StringValue(True)
