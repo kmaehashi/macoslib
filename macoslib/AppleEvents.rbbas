@@ -127,6 +127,11 @@ Protected Module AppleEvents
 		  err = AEGetDescData(aed, mb, mb.Size)
 		  bundleId = mb.CString(0)
 		  
+		  If bundleId.Len() = 4 Then
+		    // seems like an OSType
+		    Return ae.Send()
+		  End If
+		  
 		  psn = LookupPSNFromBundleID(bundleId)
 		  
 		  If psn.highLongOfPSN = 0 And psn.lowLongOfPSN = 0 Then
