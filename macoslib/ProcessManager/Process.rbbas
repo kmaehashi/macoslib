@@ -8,19 +8,16 @@ Protected Class Process
 		    Dim cfDicRef As Integer = ProcessInformationCopyDictionary(psn, kProcessDictionaryIncludeAllInformationMask)
 		    Dim cfDic As CFDictionary = CFDictionary(CFType.FromHandle(cfDicRef))
 		    Dim key As New CFString("CFBundleIdentifier") // kCFBundleIdentifierKey
+		    Dim bundleId As String = ""
 		    
 		    If cfDic.HasKey(key) then
-		      Return CFString(cfDic.Value(key))
-		    Else
-		      Return ""
+		      bundleId = CFString(cfDic.Value(key))
 		    End if
-		  #endif
-		  
-		  
-		Finally
-		  #if TargetMacOS
 		    CoreFoundation.Release(Ptr(cfDicRef))
+		    
+		    Return bundleId
 		  #endif
+		  
 		End Function
 	#tag EndMethod
 

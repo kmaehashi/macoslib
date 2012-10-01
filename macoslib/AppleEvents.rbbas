@@ -108,29 +108,36 @@ Protected Module AppleEvents
 
 	#tag Method, Flags = &h0
 		Function SendUsingPSN(Extends ae As AppleEvent, autoStart As Boolean = False) As Boolean
-		  // Send AppleEvent using PSN instead of Bundle ID; workaround for Mountain Lion 10.8.2 or later
+		  // Send AppleEvent using PSN instead of Bundle ID
 		  
 		  Soft Declare Function AEGetAttributeDesc Lib "Carbon" (theAppleEvent As Integer, theAEKeyword As OSType, desiredType As OSType, ByRef result As AEDesc) As Short
 		  Soft Declare Function AEPutAttributeDesc Lib "Carbon" (theAppleEvent As Integer, theAEKeyword As OSType, ByRef result As AEDesc) As Short
 		  Soft Declare Function AEReplaceDescData Lib "Carbon" (typeCode As OSType, dataPtr As Ptr, dataSize As Integer, ByRef theAEDesc As AEDesc) As Short
 		  Soft Declare Function AEGetDescData Lib "Carbon" (ByRef theAEDesc As AEDesc, dataPtr As Ptr, maximumSize As Integer) As Short
+		  Soft Declare Function AEDisposeDesc Lib "Carbon" (ByRef theAEDesc As AEDesc) As Short
 		  
 		  Dim err As Short = 0
 		  Dim aed As AEDesc
-		  Dim mb As New MemoryBlock(128)
+		  Dim mb As New MemoryBlock(256)
 		  Dim bundleId As String
 		  Dim psn As ProcessSerialNumber
 		  
-		  // Retrieve Bundle ID set by the constructor
+		  // Retrieve bundle ID set via the constructor
 		  err =  AEGetAttributeDesc(ae.Ptr, "addr", "bund", aed)
 		  If err <> 0 Then Return ae.Send()
-		  err = AEGetDescData(aed, mb, mb.Size)
-		  bundleId = mb.CString(0)
 		  
-		  // bundleId seems like an OSType
+		  err = AEGetDescData(aed, mb, mb.Size)
+		  If err <> 0 Then Return False
+		  
+		  bundleId = mb.CString(0)
+		  err = AEDisposeDesc(aed)
+		  If err <> 0 Then Return False
+		  
+		  // bundle ID seems like an OSType
 		  If bundleId.Len() = 4 Then Return ae.Send()
 		  
 		  psn = LookupPSNFromBundleID(bundleId)
+		  
 		  If psn.highLongOfPSN = 0 And psn.lowLongOfPSN = 0 Then
 		    // App is not running...
 		    If autoStart Then
@@ -148,8 +155,13 @@ Protected Module AppleEvents
 		  End If
 		  
 		  mb.CString(0) = psn.StringValue(True)
+		  
 		  err = AEReplaceDescData("psn ", mb, psn.Size, aed)
+		  If err <> 0 Then Return False
+		  
 		  err = AEPutAttributeDesc(ae.Ptr, "addr", aed)
+		  err = AEDisposeDesc(aed)
+		  If err <> 0 Then Return False
 		  
 		  Return ae.Send()
 		End Function
