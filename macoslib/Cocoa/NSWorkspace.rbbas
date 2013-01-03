@@ -448,6 +448,8 @@ Inherits NSObject
 		 Shared Function URLForApplicationWithBundleIdentifier(bundleIdentifier as String) As NSURL
 		  
 		  #if TargetMacOS
+		    // Available in OS X v10.6 and later.
+		    
 		    dim url as NSURL
 		    
 		    declare function URLForApplicationWithBundleIdentifier lib CocoaLib selector "URLForApplicationWithBundleIdentifier:" (ws as Ptr, id as CFStringRef) as Ptr
